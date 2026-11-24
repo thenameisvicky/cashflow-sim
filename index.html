@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cashflow</title>
-  <meta name="description" content="Interactive cashflow Sankey: add inflows and outflows and watch the money move." />
+  <title>Sankey Chart</title>
+  <meta name="description" content="Sankey Chart: add your income and expenses and see where your money goes, live." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -46,9 +46,13 @@
 
     /* Header */
     header {
-      display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
       padding: 12px 24px; max-width: 1680px; width: 100%; margin: 0 auto;
     }
+    .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; }
+    .brand-mark { width: 32px; height: 32px; border-radius: 9px; background: var(--ink); color: #fff; display: grid; place-items: center; }
+    .brand-mark svg { width: 18px; height: 18px; }
+    .brand-name { font-size: 17px; font-weight: 800; letter-spacing: -.02em; }
     .actions { display: flex; gap: 8px; }
     .btn {
       display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
@@ -307,8 +311,14 @@
 <body>
   <div class="app">
     <header>
+      <a class="brand" href="./" aria-label="Sankey Chart home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 6c7 0 7 12 14 12h4M3 18c7 0 7-12 14-12h4" /></svg>
+        </span>
+        <span class="brand-name">Sankey Chart</span>
+      </a>
       <div class="actions">
-        <button id="resetBtn" class="btn" type="button" title="Restore the default items">
+        <button id="resetBtn" class="btn" type="button" title="Restore the example data">
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.6m14.8 2A8 8 0 004.6 9M4.6 9H9m11 11v-5h-.6m0 0a8 8 0 01-15.3-2m15.3 2H15" /></svg>
           <span>Reset</span>
         </button>
@@ -384,7 +394,7 @@
   <script>
     'use strict';
 
-    const STORAGE_KEY = 'cashflow_sim_v2';
+    const STORAGE_KEY = 'sankey_chart_v1';
     const IN_COLORS = ['#16a34a', '#22c55e', '#15803d', '#4ade80', '#166534', '#65a30d'];
     const OUT_COLORS = ['#dc2626', '#ef4444', '#b91c1c', '#f87171', '#991b1b', '#e11d48'];
     const POOL_COLOR = '#6366f1';
@@ -393,25 +403,20 @@
     const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     /* ---------- Data ---------- */
+    // Example data so first-time visitors see how it works; replace with your own
     function defaults() {
       const incomes = [
-        { id: 'inc_salary', label: 'Salary', amount: 32000, max: 60000, enabled: true, note: 'Monthly salary' },
-        { id: 'inc_mom', label: 'Mom Contribution', amount: 14000, max: 35000, enabled: true, note: 'Family support' },
-        { id: 'inc_celerio', label: 'Celerio Rent', amount: 10100, max: 30000, enabled: true, note: '₹9,100 balance + ₹1,000 advance' }
+        { id: 'inc_salary', label: 'Salary', amount: 60000, max: 150000, enabled: true, note: 'Example: monthly take-home' },
+        { id: 'inc_freelance', label: 'Freelance', amount: 12000, max: 50000, enabled: true, note: 'Example: side income' }
       ];
       const expenses = [
-        { id: 'exp_dad', label: 'Dad Amount', amount: 20000, max: 40000, enabled: true, tier: 'must' },
-        { id: 'exp_cc', label: 'Credit Card (2209)', amount: 18260, max: 40000, enabled: true, tier: 'must', note: 'Due Dec 7' },
-        { id: 'exp_edu_backlog', label: 'Edu Loan Backlog', amount: 10350, max: 30000, enabled: true, tier: 'must' },
-        { id: 'exp_edu_dec10', label: 'Edu Loan (Dec 10)', amount: 8500, max: 25000, enabled: true, tier: 'must' },
-        { id: 'exp_car_emi', label: 'Car EMI', amount: 12320, max: 25000, enabled: true, tier: 'must' },
-        { id: 'exp_advance', label: 'Advance', amount: 10000, max: 25000, enabled: true, tier: 'must' },
-        { id: 'exp_rent1', label: 'Rent 1', amount: 6000, max: 20000, enabled: true, tier: 'must' },
-        { id: 'exp_app_emi', label: 'App EMI', amount: 2500, max: 15000, enabled: true, tier: 'must' },
-        { id: 'exp_rent2', label: 'Rent 2', amount: 5000, max: 20000, enabled: false, tier: 'optional' },
-        { id: 'exp_dress', label: 'Niranjana Dress', amount: 3000, max: 15000, enabled: false, tier: 'optional' },
-        { id: 'exp_claude', label: 'Claude Code', amount: 2500, max: 10000, enabled: false, tier: 'optional' },
-        { id: 'exp_chatgpt', label: 'ChatGPT', amount: 400, max: 5000, enabled: false, tier: 'optional' }
+        { id: 'exp_rent', label: 'Rent', amount: 18000, max: 50000, enabled: true, tier: 'must' },
+        { id: 'exp_groceries', label: 'Groceries', amount: 8000, max: 25000, enabled: true, tier: 'must' },
+        { id: 'exp_emi', label: 'Loan EMI', amount: 12000, max: 40000, enabled: true, tier: 'must' },
+        { id: 'exp_bills', label: 'Utilities & Bills', amount: 4000, max: 15000, enabled: true, tier: 'must' },
+        { id: 'exp_transport', label: 'Transport', amount: 5000, max: 15000, enabled: true, tier: 'must' },
+        { id: 'exp_dining', label: 'Dining Out', amount: 4000, max: 15000, enabled: true, tier: 'optional' },
+        { id: 'exp_subs', label: 'Subscriptions', amount: 1500, max: 5000, enabled: false, tier: 'optional', note: 'Toggle on to include' }
       ];
       return colorize({ incomes, expenses });
     }
@@ -989,7 +994,7 @@
         renderList('in', { stagger: true });
         renderList('out', { stagger: true });
         update(900);
-        toast('Reset to default items');
+        toast('Reset to example data');
       });
 
       $('copyBtn').addEventListener('click', () => {
